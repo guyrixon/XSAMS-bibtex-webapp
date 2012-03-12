@@ -27,30 +27,11 @@
 	</xsl:template>
 
 	<xsl:template match="versionOfSoftware">
-		<p><xsl:text>Version of Node Software: </xsl:text><xsl:value-of select="."/></p>
-	</xsl:template>
-
-	<xsl:template match="sampleQuery">
-		<p><xsl:text>Sample query: </xsl:text><xsl:value-of select="."/></p>
+		<p><xsl:text>Version of software: </xsl:text><xsl:value-of select="."/></p>
 	</xsl:template>
   
   <xsl:template match="numberOfInputs">
 		<p><xsl:text>Number of XSAMS inputs: </xsl:text><xsl:value-of select="."/></p>
-	</xsl:template>
-
-	<xsl:template match="returnable">
-		<p>
-			Returnable
-			<xsl:value-of select="." />
-		</p>
-	</xsl:template>
-
-	<xsl:template match="restrictable">
-		<p>
-			Restrictable
-			<xsl:value-of select="." />
-		</p>
-
 	</xsl:template>
 
 	<xsl:template match="interface">
@@ -97,14 +78,4 @@
 		</dl>
 	</xsl:template>
 
-	<xsl:template match="managedApplications">
-		<h3>Applications</h3>
-		<ul>
-			<xsl:for-each select="ApplicationReference">
-				<li>
-					<xsl:value-of select="." />
-				</li>
-			</xsl:for-each>
-		</ul>
-	</xsl:template>
 </xsl:stylesheet>

@@ -5,11 +5,12 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>Views of XSAMS</title>
+        <title>BibTeX extracted from XSAMS</title>
     </head>
     <body>
-        <h1>Views of an XSAMS document</h1>
-        This application tabulates the states and transitions in an XSAMS documents.
+        <h1>BibTeX extracted from XSAMS</h1>
+        This application extracts the bibliography from an XSAMS document and
+        delivers it to you in BibTeX format.
         It can read data from a URL (e.g. direct from a VAMDC database-service)
         or from a file uploaded from your desktop.
         <form  action="service" method="post" enctype="application/x-www-form-urlencoded">

@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.fileupload.FileItemIterator;
@@ -15,65 +13,49 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.fileupload.util.Streams;
 
 /**
- *
+ * An abstract parent for all servlets in the application. This parent just
+ * deals with logging and reporting of errors. It provides the following
+ * support to its subclasses.
+ * <ul>
+ * <li>An inheritable commons-logging {@link #Log}.
+ * <li>All Exception instances from the sub-class caught (including
+ * runtime exceptions that inherit from Exception, but not those that inherit
+ * from Error).
+ * <li>All caught exceptions logged with stack traces.
+ * <li>Instances of RequestException reported as 400 errors.
+ * <li>All other caught exceptions reported as 500 errors.
+ * </ul>
+ * The above provisions apply to GET and POST requests only.
+ * 
  * @author Guy Rixon
  */
-public class CacheServlet extends HttpServlet {
-  
-  public final static String CACHE_ATTRIBUTE = "eu.vamdc.xsams.views.cacheMap";
+public class CacheServlet extends ErrorReportingServlet {
   
   private DataCache cache;
   
-  @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response) 
-      throws ServletException, IOException {
-    System.out.println("GET " + request.getContentType());
-    try {
-      get(request, response);
-    }
-    catch (RequestException e) {
-      log(e.toString());
-      response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.toString());
-    }
-  }
   
   @Override
-  public void doPost(HttpServletRequest request, HttpServletResponse response) 
-      throws ServletException, IOException {
-    System.out.println("POST " + request.getContentType());
-    try {
-      post(request, response);
-    }
-    catch (RequestException e) {
-      log(e.toString());
-      response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.toString());
-    }
-    catch (Exception e) {
-      e.printStackTrace();
-      response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to cache the XSAMS document: " + e.toString());
-    }
-  }
-  
   public void get(HttpServletRequest request, HttpServletResponse response) 
-      throws RequestException, IOException {
+      throws RequestException, IOException, DownloadException {
     
     URL u = getUrl(request);
     String key = cache.put(u);
-    log("Cached at " + cache.get(key).getCacheFile());
+    LOG.info("Cached at " + cache.get(key).getCacheFile());
     redirect(request, key, response);
   }
 
-  public void post(HttpServletRequest request, HttpServletResponse response) throws IOException, RequestException {
+  @Override
+  public void post(HttpServletRequest request, HttpServletResponse response) throws IOException, RequestException, DownloadException {
     if ("application/x-www-form-urlencoded".equals(request.getContentType())) {
-      System.out.println("Handling application/x-www-form-urlencoded");
+      LOG.debug("Handling application/x-www-form-urlencoded");
       URL u = getUrl(request);
       String key = cache.put(u);
-      System.out.println("Cached at " + cache.get(key).getCacheFile());
+      LOG.debug("Cached at " + cache.get(key).getCacheFile());
       redirect(request, key, response);
-      System.out.println("Redirection committed.");
+      LOG.debug("Redirection committed.");
     }
     else {
-      System.out.println("Handling multipart");
+      LOG.debug("Handling multipart");
       try {
         ServletFileUpload upload = new ServletFileUpload();
         FileItemIterator iter = upload.getItemIterator(request);
@@ -87,10 +69,10 @@ public class CacheServlet extends HttpServlet {
           }
           InputStream stream = item.openStream();
           if (item.isFormField()) {
-            log("Form field " + name + " with value " + Streams.asString(stream) + " detected.");
+            LOG.debug("Form field " + name + " with value " + Streams.asString(stream) + " detected.");
           }
           else {
-            log("File field " + name + " with file name " + item.getName() + " detected.");
+            LOG.debug("File field " + name + " with file name " + item.getName() + " detected.");
             String key = cache.put(stream);
             redirect(request, key, response);
           }
@@ -98,7 +80,6 @@ public class CacheServlet extends HttpServlet {
         }
       }
       catch (FileUploadException e) {
-        e.printStackTrace();
         throw new RequestException(e);
       }
     }
@@ -110,7 +91,7 @@ public class CacheServlet extends HttpServlet {
   @Override
   public void init() {
     cache = new DataCache();
-    getServletContext().setAttribute(CACHE_ATTRIBUTE, cache);
+    getServletContext().setAttribute(DataCache.CACHE_ATTRIBUTE, cache);
   }
   
   /**
@@ -119,13 +100,13 @@ public class CacheServlet extends HttpServlet {
   @Override
   public void destroy() {
     try {
-      getServletContext().removeAttribute(CACHE_ATTRIBUTE);
+      getServletContext().removeAttribute(DataCache.CACHE_ATTRIBUTE);
       cache.empty();
       cache = null;
       
     }
     catch (Exception e) {
-     log("Failed to delete the data cache: " + e);
+     LOG.error("Failed to delete the data cache", e);
     }
   }  
   
@@ -179,7 +160,7 @@ public class CacheServlet extends HttpServlet {
   
   
   private void redirect(HttpServletRequest request, String key, HttpServletResponse response) {
-    response.setHeader("Location", Locations.getStateListLocation(request, key));
+    response.setHeader("Location", Locations.getBibtexLocation(request, key));
     response.setStatus(HttpServletResponse.SC_SEE_OTHER);
   }
   

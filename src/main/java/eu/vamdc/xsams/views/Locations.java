@@ -19,20 +19,8 @@ public class Locations {
     return getRootLocation(request) + "/service";
   }
   
-  public static String getStateListLocation(HttpServletRequest request, String key) {
-    return getRootLocation(request) + "/state-list/" + key;
-  }
-  
-  public static String getLineListLocation(HttpServletRequest request, String key) {
-    return getRootLocation(request) + "/line-list/" + key;
-  }
-  
-  public static String getStateLocation(HttpServletRequest request, String key) {
-    return getRootLocation(request) + "/state/" + key;
-  }
-  
-  public static String getBroadeningLocation(HttpServletRequest request, String key) {
-    return getRootLocation(request) + "/broadening/" + key;
+  public static String getBibtexLocation(HttpServletRequest request, String key) {
+    return getRootLocation(request) + "/bibtex/" + key;
   }
   
   public static String getCapabilitiesLocation(HttpServletRequest request) {

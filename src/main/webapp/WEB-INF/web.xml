@@ -2,16 +2,12 @@
 <web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
     <display-name>xsams-views-webapp</display-name>
     <servlet>
-        <servlet-name>LineListServlet</servlet-name>
-        <servlet-class>eu.vamdc.xsams.views.LineListServlet</servlet-class>
-    </servlet>
-    <servlet>
-        <servlet-name>StateListServlet</servlet-name>
-        <servlet-class>eu.vamdc.xsams.views.StateListServlet</servlet-class>
-    </servlet>
-    <servlet>
-        <servlet-name>SelectedStateServlet</servlet-name>
-        <servlet-class>eu.vamdc.xsams.views.SelectedStateServlet</servlet-class>
+        <servlet-name>BibtexServlet</servlet-name>
+        <servlet-class>eu.vamdc.xsams.views.TransformingServlet</servlet-class>
+        <init-param>
+            <param-name>stylesheet</param-name>
+            <param-value>/XsamsToBibtex.xsl</param-value>
+        </init-param>
     </servlet>
     <servlet>
         <servlet-name>CacheServlet</servlet-name>
@@ -21,33 +17,17 @@
         <servlet-name>CapabilitiesServlet</servlet-name>
         <servlet-class>eu.vamdc.xsams.views.CapabilitiesServlet</servlet-class>
     </servlet>
-    <servlet>
-        <servlet-name> BroadeningServlet</servlet-name>
-        <servlet-class>eu.vamdc.xsams.views.BroadeningServlet</servlet-class>
-    </servlet>
     <servlet-mapping>
         <servlet-name>CacheServlet</servlet-name>
         <url-pattern>/service</url-pattern>
-    </servlet-mapping>
-    <servlet-mapping>
-        <servlet-name>LineListServlet</servlet-name>
-        <url-pattern>/line-list/*</url-pattern>
-    </servlet-mapping>
-    <servlet-mapping>
-        <servlet-name>StateListServlet</servlet-name>
-        <url-pattern>/state-list/*</url-pattern>
-    </servlet-mapping>
-    <servlet-mapping>
-        <servlet-name>SelectedStateServlet</servlet-name>
-        <url-pattern>/state/*</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>CapabilitiesServlet</servlet-name>
         <url-pattern>/capabilities</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
-        <servlet-name> BroadeningServlet</servlet-name>
-        <url-pattern>/broadening/*</url-pattern>
+        <servlet-name>BibtexServlet</servlet-name>
+        <url-pattern>/bibtex/*</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>

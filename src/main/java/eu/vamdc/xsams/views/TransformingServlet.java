@@ -3,14 +3,16 @@ package eu.vamdc.xsams.views;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
@@ -18,43 +20,43 @@ import javax.xml.transform.stream.StreamSource;
  * A servlet that transforms data to web pages using XSLT. The servlet uses
  * the data cache shared throughout the web application.
  * 
+ * @throws RequestException If the request does not identified the cached data to view.
+ * @throws RequestException If the specified data are not in the cache.
+ * @throws FileNotFoundException If the data are known to the cache but their file is missing.
+ * @throws IOException If the response cannot be written.
+ * @throws IllegalStateException If the data cache is not available.
+ * @throws IllegalStateException If the transforming stylesheet is not available.
+ * @throws TransformerException If the XSAMS cannot be transformed to HTML.
  * @author Guy Rixon
  */
-public abstract class TransformingServlet extends HttpServlet {
+public class TransformingServlet extends ErrorReportingServlet {
   
   @Override
-  protected void doGet(HttpServletRequest request, HttpServletResponse response) 
-      throws IOException, ServletException {
-    try {
-      produceDocument(request, response);
-    }
-    catch (RequestException e) {
-      response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.toString());
-    }
-    catch (Exception e) {
-      response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.toString());
-    }
+  public void get(HttpServletRequest request, HttpServletResponse response) 
+      throws RequestException, IllegalStateException, FileNotFoundException, IOException, TransformerException, Exception {
+    String key = getKey(request);
+    StreamSource in = getData(key);
+    response.setContentType("text/html");
+    response.setCharacterEncoding("UTF-8");
+    StreamResult out = new StreamResult(response.getWriter());
+    
+    Transformer t = TransformerFactory.newInstance().newTransformer(getXslt());
+    t.transform(in, out);
   }
   
   @Override
-  protected void doPost(HttpServletRequest request, HttpServletResponse response) 
-      throws IOException, ServletException {
-    try {
-      produceDocument(request, response);
-    }
-    catch (RequestException e) {
-      response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.toString());
-    }
-    catch (Exception e) {
-      response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.toString());
-    }
+  public void post(HttpServletRequest request, HttpServletResponse response) 
+      throws RequestException, IllegalStateException, FileNotFoundException, IOException, TransformerException, Exception {
+    get(request, response);
   }
   
   
-  protected StreamSource getData(String key) throws ServletException, FileNotFoundException {
-    DataCache cache = (DataCache) getServletContext().getAttribute(CacheFilter.CACHE_ATTRIBUTE);
+  
+  protected StreamSource getData(String key) 
+      throws RequestException, IllegalStateException, FileNotFoundException {
+    DataCache cache = (DataCache) getServletContext().getAttribute(DataCache.CACHE_ATTRIBUTE);
     if (cache == null) {
-      throw new ServletException("The data cache is missing");
+      throw new IllegalStateException("The data cache is missing");
     }
     cache.purge();
     CachedDataSet x = cache.get(key);
@@ -66,7 +68,7 @@ public abstract class TransformingServlet extends HttpServlet {
       return new StreamSource(fr);
     }
     catch (FileNotFoundException e) {
-      throw new ServletException("Cache file " + x.getCacheFile() + " is missing");
+      throw new FileNotFoundException("Cached XSAMS file " + x.getCacheFile() + " is missing");
     }
   }
   
@@ -77,7 +79,7 @@ public abstract class TransformingServlet extends HttpServlet {
   }
   
   protected String getOriginalUrlEncoded(String key) throws RequestException {
-    DataCache cache = (DataCache) getServletContext().getAttribute(CacheFilter.CACHE_ATTRIBUTE);
+    DataCache cache = (DataCache) getServletContext().getAttribute(DataCache.CACHE_ATTRIBUTE);
     if (cache == null) {
       throw new RequestException("The data cache is missing");
     }
@@ -94,42 +96,13 @@ public abstract class TransformingServlet extends HttpServlet {
     }
   }
   
-  
-  
-  
-  protected void produceDocument(HttpServletRequest request, HttpServletResponse response) throws RequestException, ServletException, FileNotFoundException, IOException {
-    String key = getKey(request);
-    StreamSource in = getData(key);
-    response.setContentType("text/html");
-    response.setCharacterEncoding("UTF-8");
-    String u = getOriginalUrlEncoded(key);
-    String reloadUrl = (u == null)? "" : Locations.getServiceLocation(request) + "?url=" + u;
-    StreamResult out = new StreamResult(response.getWriter());
-    Transformer t = getTransformer(Locations.getLineListLocation(request, key),
-                                   Locations.getStateListLocation(request, key),
-                                   Locations.getStateLocation(request, key),
-                                   Locations.getBroadeningLocation(request, key),
-                                   reloadUrl,
-                                   request.getParameter("id"));
-    transform(in, out, t);
-  }
-  
-  protected void transform(StreamSource in, StreamResult out, Transformer t)
-      throws ServletException {
-    try {
-      t.transform(in, out);
+  protected Source getXslt() {
+    String stylesheetName = getInitParameter("stylesheet");
+    InputStream in = this.getClass().getResourceAsStream("/"+stylesheetName);
+    if (in == null) {
+      throw new IllegalStateException("Can't find the stylesheet " + stylesheetName);
     }
-    catch (Exception e) {
-      throw new ServletException(e);
-    }
+    return new StreamSource(in);
   }
-  
-  
-  protected abstract Transformer getTransformer(String lineListUrl,
-                                                String stateListUrl,
-                                                String selectedStateUrl,
-                                                String broadeningUrl,
-                                                String reloadUrl,
-                                                String id) throws ServletException;
   
 }
