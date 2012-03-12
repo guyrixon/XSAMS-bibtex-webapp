@@ -1,15 +1,19 @@
 package eu.vamdc.xsams.views;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -51,6 +55,8 @@ public class DataCache {
   
   public static final long CACHE_LIFETIME_IN_MILLISECONDS = 
       CACHE_LIFETIME_IN_SECONDS * 1000L;
+  
+  private final static Charset UTF8 = Charset.forName("UTF-8");
   
   private Integer counter;
   
@@ -155,8 +161,10 @@ public class DataCache {
    * @throws IOException If the the file cannot be written.
    * @throws DownloadException if the stream gave no bytes.
    */
-  private void readFromStream(InputStream in, File f) throws FileNotFoundException, IOException, DownloadException {
-    BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(f));
+  private void readFromStream(InputStream i, File f) throws FileNotFoundException, IOException, DownloadException {
+    BufferedReader in = new BufferedReader(new InputStreamReader(i, UTF8));
+    BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(f), UTF8));
+    LOG.info("Caching to " + f);
     try {
       long n;
       for (n = 0; true; n++) {

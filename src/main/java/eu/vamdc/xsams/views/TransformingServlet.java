@@ -1,12 +1,16 @@
 package eu.vamdc.xsams.views;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.transform.Source;
@@ -36,7 +40,7 @@ public class TransformingServlet extends ErrorReportingServlet {
       throws RequestException, IllegalStateException, FileNotFoundException, IOException, TransformerException, Exception {
     String key = getKey(request);
     StreamSource in = getData(key);
-    response.setContentType("text/html");
+    response.setContentType("text/plain");
     response.setCharacterEncoding("UTF-8");
     StreamResult out = new StreamResult(response.getWriter());
     
@@ -64,8 +68,8 @@ public class TransformingServlet extends ErrorReportingServlet {
       throw new RequestException("Nothing is cached under " + key);
     }
     try {
-      FileReader fr = new FileReader(x.getCacheFile());
-      return new StreamSource(fr);
+      Reader r = new InputStreamReader(new FileInputStream(x.getCacheFile()), Charset.forName("UTF-8"));
+      return new StreamSource(r);
     }
     catch (FileNotFoundException e) {
       throw new FileNotFoundException("Cached XSAMS file " + x.getCacheFile() + " is missing");
