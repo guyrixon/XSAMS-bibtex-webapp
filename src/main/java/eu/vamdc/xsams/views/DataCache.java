@@ -124,17 +124,6 @@ public class DataCache {
    * @throws IOException If the the file cannot be written.
    * @throws DownloadException if the stream gave no bytes.
    */
-  /**
-   * Reads data from a stream and writes them to a file.
-   * 
-   * @param in The data to be read.
-   * @param f The file to receive the data.
-   * @return The number of bytes read.
-   * @throws FileNotFoundException If the given file does not exist.
-   * @throws IOException If the stream cannot be read.
-   * @throws IOException If the the file cannot be written.
-   * @throws DownloadException if the stream gave no bytes.
-   */
   private void readFromStream(InputStream i, File f) 
       throws FileNotFoundException, IOException, DownloadException {
     BufferedInputStream in = new BufferedInputStream(i);
