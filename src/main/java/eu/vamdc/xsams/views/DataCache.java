@@ -1,26 +1,21 @@
 package eu.vamdc.xsams.views;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.SocketTimeoutException;
 import java.net.URL;
-import java.net.URLConnection;
-import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.Inflater;
-import java.util.zip.InflaterInputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -56,15 +51,17 @@ public class DataCache {
   public static final long CACHE_LIFETIME_IN_MILLISECONDS = 
       CACHE_LIFETIME_IN_SECONDS * 1000L;
   
-  private final static Charset UTF8 = Charset.forName("UTF-8");
-  
   private Integer counter;
   
   private HashMap<String, CachedDataSet> map;
   
+  private ExecutorService executor;
+  
+  
   public DataCache() {
     counter = 0;
     map = new HashMap<String, CachedDataSet>();
+    executor = Executors.newFixedThreadPool(5);
   }
   
   /**
@@ -73,6 +70,7 @@ public class DataCache {
    * @throws IOException If any data-set cannot be deleted.
    */
   public synchronized void empty() throws IOException {
+    executor.shutdownNow();
     for (CachedDataSet x : map.values()) {
       if (!x.getCacheFile().delete()) {
         throw new IOException("Failed to delete " + x.getCacheFile() + " from the data cache");
@@ -81,7 +79,9 @@ public class DataCache {
   }
   
   /**
-   * Reads the given URL and caches the data there obtained.
+   * Enqueues a download from the URL to a cache file and enters that
+   * file into the cache map. The status of the download can be checked by
+   * retrieving the map entry and checking the Future therein.
    * 
    * @param u The URL for the data.
    * @return The key for the cached data.
@@ -92,63 +92,26 @@ public class DataCache {
    */
   public String put(URL u) throws DownloadException, IOException {
     File f = File.createTempFile("cache-", ".xsams.xml");
-    try {
-      readFromUrl(u, f);
-    }
-    catch (SocketTimeoutException e) {
-      throw new DownloadTimeoutException("Timed out while reading from " + u, e);
-    }
-    catch (Exception e) {
-      f.delete();
-      throw new DownloadException("Failed to download from " + u, e);
-    }
-    return put(u, f);
+    Download d = new Download(u, f);
+    Future<Object> v = executor.submit(d);
+    AtomicLong p = d.getByteCounter();
+    return put(new CachedDataSet(u, f, v, p));
   }
   
   /**
-   * Downloads the data from a URL and copies them to a file. If the URL supports
-   * "gzip" or "deflate" compression then the download is compressed in transfer
-   * and the data are decompressed before filing.
+   * Reads the given stream and caches the data there obtained.
    * 
-   * @param u The URL to read.
-   * @param f The file to receive the data.
-   * @throws IOException If the URL cannot be read.
-   * @throws IOException If the file cannot be written.
-   * @throws FileNotFoundException If the file does not exist.
-   * @throws DownloadException If the URL is read but gives no bytes.
+   * @param in The stream of data.
+   * @return The key for the cached data.
+   * @throws IOException If the data cannot be cached.
+   * @throws RequestException If the stream gives no bytes.
+   * @throws IOException If the cache file cannot be created.
    */
-  private void readFromUrl(URL u, File f) 
-      throws IOException, FileNotFoundException, DownloadException {
-    URLConnection uc = u.openConnection();
-    uc.setConnectTimeout(60000);
-    uc.setReadTimeout(60000);
-    uc.setRequestProperty("Accept-Encoding", "gzip, deflate");
-      
-    uc.connect();
-      
-    String encoding = uc.getContentEncoding();
-    LOG.debug("Transfer encoding is " + encoding);
-      
-    InputStream q;
-    if (encoding != null && encoding.equalsIgnoreCase("gzip")) {
-      q = new GZIPInputStream(uc.getInputStream());
-    }
-    else if (encoding != null && encoding.equalsIgnoreCase("deflate")) {
-      q = new InflaterInputStream(uc.getInputStream(), new Inflater(true));
-    }
-    else {
-      q = uc.getInputStream();
-    }
-    BufferedInputStream in = new BufferedInputStream(q);
-    long n;
-    try {
-      readFromStream(in, f);
-    }
-    finally {
-      in.close();
-    }
+  public String put(InputStream in) throws RequestException, IOException, FileNotFoundException, DownloadException {
+    File f = File.createTempFile("cache-", ".xsams.xml");
+    readFromStream(in, f);
+    return put(new CachedDataSet(null, f, null, null));
   }
-  
   
   /**
    * Reads data from a stream and writes them to a file.
@@ -161,13 +124,25 @@ public class DataCache {
    * @throws IOException If the the file cannot be written.
    * @throws DownloadException if the stream gave no bytes.
    */
-  private void readFromStream(InputStream i, File f) throws FileNotFoundException, IOException, DownloadException {
-    BufferedReader in = new BufferedReader(new InputStreamReader(i, UTF8));
-    BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(f), UTF8));
+  /**
+   * Reads data from a stream and writes them to a file.
+   * 
+   * @param in The data to be read.
+   * @param f The file to receive the data.
+   * @return The number of bytes read.
+   * @throws FileNotFoundException If the given file does not exist.
+   * @throws IOException If the stream cannot be read.
+   * @throws IOException If the the file cannot be written.
+   * @throws DownloadException if the stream gave no bytes.
+   */
+  private void readFromStream(InputStream i, File f) 
+      throws FileNotFoundException, IOException, DownloadException {
+    BufferedInputStream in = new BufferedInputStream(i);
+    BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(f));
     LOG.info("Caching to " + f);
     try {
-      long n;
-      for (n = 0; true; n++) {
+      long bytesDownloaded = 0L;
+      while (true) {
         int c = in.read();
         if (c == -1) {
           break;
@@ -175,44 +150,15 @@ public class DataCache {
         else {
           out.write(c);
         }
+        bytesDownloaded++;
       }
-      if (n == 0L) {
+      if (bytesDownloaded == 0L) {
         throw new DownloadException("No data were read");
       }
     }
     finally {
       out.close();
     }
-  }
-  
-  /**
-   * Reads the given stream and caches the data there obtained.
-   * 
-   * @param in The stream of data.
-   * @return The key for the cached data.
-   * @throws IOException If the data cannot be cached.
-   * @throws RequestException If the stream gives no bytes.
-   */
-  public String put(InputStream in) throws RequestException {
-    try {
-      File f = File.createTempFile("cache-", ".xsams.xml");
-      readFromStream(in, f);
-      return put(null, f);
-    }
-    catch (Exception e) {
-      throw new RequestException("Failed to read data from the request", e);
-    }
-  }
-  
-  /**
-   * Caches the data in a given file, associated with a given URL.
-   * 
-   * @param u The URL of origin of the data.
-   * @param f The file in which the data are cached.
-   * @return A key for the cached data.
-   */
-  protected String put(URL u, File f) {
-    return put(new CachedDataSet(u,f));
   }
   
   /**
@@ -248,7 +194,7 @@ public class DataCache {
   
   /**
    * Removes from the cache all data older than a time specified by the
-   * constant {@link ACHE_LIFETIME_IN_MILLISECONDS}.
+   * constant {@link CACHE_LIFETIME_IN_MILLISECONDS}.
    */
   public synchronized void purge() {
     Iterator<Entry<String,CachedDataSet>> i = map.entrySet().iterator();

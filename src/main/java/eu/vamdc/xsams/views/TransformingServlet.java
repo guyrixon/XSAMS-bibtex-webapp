@@ -2,15 +2,12 @@ package eu.vamdc.xsams.views;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.nio.charset.Charset;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.transform.Source;
@@ -37,8 +34,28 @@ public class TransformingServlet extends ErrorReportingServlet {
   
   @Override
   public void get(HttpServletRequest request, HttpServletResponse response) 
-      throws RequestException, IllegalStateException, FileNotFoundException, IOException, TransformerException, Exception {
+      throws RequestException, IllegalStateException, FileNotFoundException, 
+             IOException, TransformerException, DownloadException, ServletException {
     String key = getKey(request);
+    
+    CachedDataSet x = getCache().get(key);
+    if (x.isReady()) {
+      transformXsams(request, key, response);
+    }
+    else {
+      writeDeferral(request, x, response);
+    }
+  }
+  
+  @Override
+  public void post(HttpServletRequest request, HttpServletResponse response) 
+      throws RequestException, IllegalStateException, FileNotFoundException, 
+             IOException, TransformerException, DownloadException, ServletException {
+    get(request, response);
+  }
+  
+  public void transformXsams(HttpServletRequest request, String key, HttpServletResponse response) 
+      throws RequestException, IllegalStateException, FileNotFoundException, IOException, TransformerException {
     StreamSource in = getData(key);
     response.setContentType("text/plain");
     response.setCharacterEncoding("UTF-8");
@@ -46,12 +63,6 @@ public class TransformingServlet extends ErrorReportingServlet {
     
     Transformer t = TransformerFactory.newInstance().newTransformer(getXslt());
     t.transform(in, out);
-  }
-  
-  @Override
-  public void post(HttpServletRequest request, HttpServletResponse response) 
-      throws RequestException, IllegalStateException, FileNotFoundException, IOException, TransformerException, Exception {
-    get(request, response);
   }
   
   
@@ -62,14 +73,13 @@ public class TransformingServlet extends ErrorReportingServlet {
     if (cache == null) {
       throw new IllegalStateException("The data cache is missing");
     }
-    cache.purge();
-    CachedDataSet x = cache.get(key);
+    getCache().purge();
+    CachedDataSet x = getCache().get(key);
     if (x == null) {
       throw new RequestException("Nothing is cached under " + key);
     }
     try {
-      Reader r = new InputStreamReader(new FileInputStream(x.getCacheFile()), Charset.forName("UTF-8"));
-      return new StreamSource(r);
+      return new StreamSource(new FileInputStream(x.getCacheFile()));
     }
     catch (FileNotFoundException e) {
       throw new FileNotFoundException("Cached XSAMS file " + x.getCacheFile() + " is missing");
@@ -83,11 +93,7 @@ public class TransformingServlet extends ErrorReportingServlet {
   }
   
   protected String getOriginalUrlEncoded(String key) throws RequestException {
-    DataCache cache = (DataCache) getServletContext().getAttribute(DataCache.CACHE_ATTRIBUTE);
-    if (cache == null) {
-      throw new RequestException("The data cache is missing");
-    }
-    CachedDataSet x = cache.get(key);
+    CachedDataSet x = getCache().get(key);
     if (x == null) {
       throw new RequestException("Nothing is cached under " + key);
     }
@@ -108,5 +114,22 @@ public class TransformingServlet extends ErrorReportingServlet {
     }
     return new StreamSource(in);
   }
+  
+  
+  protected DataCache getCache() throws IllegalStateException {
+    DataCache cache = (DataCache) getServletContext().getAttribute(DataCache.CACHE_ATTRIBUTE);
+    if (cache == null) {
+      throw new IllegalStateException("The data cache is missing");
+    }
+    return cache;
+  }
+
+  private void writeDeferral(HttpServletRequest request, CachedDataSet x, HttpServletResponse response) 
+      throws ServletException, IOException {
+    long bytesDownloaded = x.getByteCounter().get();
+    request.setAttribute("eu.vamdc.xsams.views.bytesdownloaded", bytesDownloaded);
+    request.getRequestDispatcher("/later.jsp").forward(request, response);
+  }
+  
   
 }
