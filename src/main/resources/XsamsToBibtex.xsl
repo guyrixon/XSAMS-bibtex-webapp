@@ -5,7 +5,7 @@
 
   <xsl:output method="text" encoding="UTF-8" omit-xml-declaration="yes"/>
     
-  <xsl:template match="/xsams:XSAMSData/xsams:Sources/xsams:Source">
+  <xsl:template match="xsams:Source">
     <xsl:text>
     </xsl:text>
     <xsl:choose>
@@ -39,7 +39,6 @@
   <xsl:template name="article">
     <xsl:text>@article {</xsl:text>
     <xsl:value-of select="@sourceID"/>
-    <xsl:text>, </xsl:text>
     <xsl:call-template name="author-list"/>
     <xsl:call-template name="title"/>
     <xsl:call-template name="journal"/>
@@ -53,7 +52,6 @@
   <xsl:template name="book">
     <xsl:text>@book {</xsl:text>
     <xsl:value-of select="@sourceID"/>
-    <xsl:text>, </xsl:text>
     <xsl:call-template name="author-list"/>
     <xsl:call-template name="title"/>
     <xsl:call-template name="volume"/>
@@ -66,7 +64,7 @@
   <xsl:template name="database">
     <xsl:text>@misc {</xsl:text>
     <xsl:value-of select="@sourceID"/>
-    <xsl:text>, howpublished={database}, </xsl:text>
+    <xsl:text>, howpublished={database}</xsl:text>
     <xsl:call-template name="author-list"/>
     <xsl:call-template name="title"/>
     <xsl:call-template name="year"/>
@@ -76,67 +74,79 @@
   </xsl:template>
 
   <xsl:template name="author-list">
-    <xsl:text>author: {</xsl:text>
-    <xsl:for-each select="xsams:Authors/xsams:Author">
-      <xsl:if test="not(position()=1)">
-        <xsl:text> and </xsl:text>
-      </xsl:if>
-      <xsl:value-of select="xsams:Name"/>
-    </xsl:for-each>
-    <xsl:text>}, </xsl:text>
+    <xsl:if test="xsams:Authors/xsams:Author/xsams:Name">
+      <xsl:text>, author = {</xsl:text>
+      <xsl:for-each select="xsams:Authors/xsams:Author">
+        <xsl:if test="not(position()=1)">
+          <xsl:text> and </xsl:text>
+        </xsl:if>
+        <xsl:value-of select="xsams:Name"/>
+      </xsl:for-each>
+      <xsl:text>}</xsl:text>
+    </xsl:if>
   </xsl:template>
 
   <xsl:template name="title">
-    <xsl:text>title = {</xsl:text>
-    <xsl:value-of select="Title"/>
-    <xsl:text>}, </xsl:text>
+    <xsl:if test="xsams:Title">
+      <xsl:text>, title = {</xsl:text>
+      <xsl:value-of select="xsams:Title"/>
+      <xsl:text>}</xsl:text>
+    </xsl:if>
   </xsl:template>
     
   <xsl:template name="journal">
-    <xsl:text>journal{</xsl:text>
-    <xsl:value-of select="xsams:SourceName"/>
-    <xsl:text>}, </xsl:text>
+    <xsl:if test="xsams:SourceName">
+      <xsl:text>, journal = {</xsl:text>
+      <xsl:value-of select="xsams:SourceName"/>
+      <xsl:text>}</xsl:text>
+    </xsl:if>
   </xsl:template>
     
   <xsl:template name="volume">
-    <xsl:if test="Volume">
-      <xsl:text>volume{</xsl:text>
+    <xsl:if test="xsams:Volume">
+      <xsl:text>, volume = {</xsl:text>
       <xsl:value-of select="xsams:Volume"/>
-      <xsl:text>}, </xsl:text>
+      <xsl:text>}</xsl:text>
     </xsl:if>
   </xsl:template>
     
   <xsl:template name="pages">
-    <xsl:text>pages{</xsl:text>
-    <xsl:value-of select="xsams:PageBegin"/>
-    <xsl:if test="xsams:PageEnd">
-      <xsl:text>,</xsl:text>
-      <xsl:value-of select="xsams:PageEnd"/>
+    <xsl:if test="xsams:PageBegin">
+      <xsl:text>, pages = {</xsl:text>
+      <xsl:value-of select="xsams:PageBegin"/>
+      <xsl:if test="xsams:PageEnd">
+        <xsl:text>,</xsl:text>
+        <xsl:value-of select="xsams:PageEnd"/>
+      </xsl:if>
+      <xsl:text>}</xsl:text>
     </xsl:if>
-    <xsl:text>} </xsl:text>
   </xsl:template>
 
   <xsl:template name="year">
-    <xsl:text>year = {</xsl:text>
-    <xsl:value-of select="xsams:Year"/>
-    <xsl:text>},</xsl:text>
+    <xsl:if test="xsams:Year">
+      <xsl:text>, year = {</xsl:text>
+      <xsl:value-of select="xsams:Year"/>
+      <xsl:text>}</xsl:text>
+    </xsl:if>
   </xsl:template>
     
   <xsl:template name="uri">
-    <xsl:text>url{</xsl:text>
-    <xsl:value-of select="xsams:UniformResourceIdentifier[1]"/>
-    <xsl:text>}, </xsl:text>
+    <xsl:if test="xsams:UniformResourceIdentifier">
+      <xsl:text>, url{</xsl:text>
+      <xsl:value-of select="xsams:UniformResourceIdentifier[1]"/>
+      <xsl:text>}</xsl:text>
+    </xsl:if>
   </xsl:template>
     
   <xsl:template name="publisher">
     <xsl:if test="xsams:Publisher">
-      <xsl:text>publisher{</xsl:text>
+      <xsl:text>, publisher = {</xsl:text>
       <xsl:value-of select="xsams:Publisher"/>
       <xsl:if test="xsams:City">
         <xsl:text>, </xsl:text>
         <xsl:value-of select="xsams:City"/>
       </xsl:if>
-      <xsl:text>}, </xsl:text>
+      <xsl:text>}</xsl:text>
     </xsl:if>
   </xsl:template>
     
