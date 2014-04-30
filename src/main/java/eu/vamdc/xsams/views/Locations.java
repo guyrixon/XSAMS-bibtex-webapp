@@ -31,4 +31,8 @@ public class Locations {
     return getRootLocation(request) + "/Capabilities.xsl";
   }
   
+  public static String getAvailabilityLocation(HttpServletRequest request) {
+    return getRootLocation(request) + "/availability";
+  }
+  
 }

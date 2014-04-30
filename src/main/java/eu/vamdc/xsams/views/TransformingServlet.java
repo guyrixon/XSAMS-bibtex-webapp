@@ -10,6 +10,9 @@ import java.net.URLEncoder;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.stream.XMLEventReader;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.events.XMLEvent;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
@@ -56,12 +59,13 @@ public class TransformingServlet extends ErrorReportingServlet {
   
   public void transformXsams(HttpServletRequest request, String key, HttpServletResponse response) 
       throws RequestException, IllegalStateException, FileNotFoundException, IOException, TransformerException {
+    String version = getXsamsVersion(getData(key));
     StreamSource in = getData(key);
     response.setContentType("text/plain");
     response.setCharacterEncoding("UTF-8");
     StreamResult out = new StreamResult(response.getWriter());
     
-    Transformer t = TransformerFactory.newInstance().newTransformer(getXslt());
+    Transformer t = TransformerFactory.newInstance().newTransformer(getXslt(version));
     t.transform(in, out);
   }
   
@@ -106,9 +110,9 @@ public class TransformingServlet extends ErrorReportingServlet {
     }
   }
   
-  protected Source getXslt() {
+  protected Source getXslt(String version) {
     String stylesheetName = getInitParameter("stylesheet");
-    InputStream in = this.getClass().getResourceAsStream("/"+stylesheetName);
+    InputStream in = this.getClass().getResourceAsStream("/"+version+"/"+stylesheetName);
     if (in == null) {
       throw new IllegalStateException("Can't find the stylesheet " + stylesheetName);
     }
@@ -122,6 +126,44 @@ public class TransformingServlet extends ErrorReportingServlet {
       throw new IllegalStateException("The data cache is missing");
     }
     return cache;
+  }
+  
+  protected String getXsamsVersion(Source xml) throws RequestException {
+    XMLEventReader in = null;
+    try {
+      in = XMLInputFactory.newFactory().createXMLEventReader(xml);
+      while (in.hasNext()) {
+        XMLEvent x = (XMLEvent) in.next();
+        if (x.isStartElement()) {
+          String n = x.asStartElement().getName().getNamespaceURI();
+          if ("http://vamdc.org/xml/xsams/0.3".equals(n)) {
+            LOG.info("XSAMS v0.3");
+            return "0.3";
+          }
+          else if ("http://vamdc.org/xml/xsams/1.0".equals(n)) {
+            LOG.info("XSAMS v1.0");
+            return "1.0";
+          }
+          else {
+            throw new RequestException("XSAMS version was not recognized");
+          }
+        }
+      }
+      throw new RequestException("XSAMS version was not given");
+    }
+    catch(Exception e) {
+      throw new RequestException("XSAMS version was not found", e);
+    }
+    finally {
+      if (in != null) {
+        try {
+          in.close();
+        }
+        catch (Exception e) {
+          // Ignore it.
+        }
+      }
+    }
   }
 
   private void writeDeferral(HttpServletRequest request, CachedDataSet x, HttpServletResponse response) 

@@ -17,6 +17,10 @@
         <servlet-name>CapabilitiesServlet</servlet-name>
         <servlet-class>eu.vamdc.xsams.views.CapabilitiesServlet</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>AvailabilityServlet</servlet-name>
+        <servlet-class>eu.vamdc.xsams.views.AvailabilityServlet</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>CacheServlet</servlet-name>
         <url-pattern>/service</url-pattern>
@@ -24,6 +28,10 @@
     <servlet-mapping>
         <servlet-name>CapabilitiesServlet</servlet-name>
         <url-pattern>/capabilities</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>AvailabilityServlet</servlet-name>
+        <url-pattern>/availability</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
         <servlet-name>BibtexServlet</servlet-name>

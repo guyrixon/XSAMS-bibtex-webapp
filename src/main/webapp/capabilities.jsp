@@ -35,5 +35,12 @@
       <resultType>application/xml</resultType>
     </interface>
   </capability>
+      
+  <capability standardID="ivo://ivoa.net/std/VOSI#availability">
+    <interface xsi:type="vs:ParamHTTP">
+      <accessURL><%=Locations.getAvailabilityLocation(request)%></accessURL>
+      <resultType>application/xml</resultType>
+    </interface>
+  </capability>
         
 </cap:capabilities>

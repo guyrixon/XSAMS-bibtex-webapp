@@ -5,9 +5,9 @@
   <groupId>eu.vamdc</groupId>
   <artifactId>xsams-bibtex-webapp</artifactId>
   <packaging>war</packaging>
-  <version>1.0-SNAPSHOT</version>
+  <version>12.07-SNAPSHOT</version>
 
-  <name>xsams-bibtex-webapp</name>
+  <name>XSAMS-to-BibTeX processor web-app</name>
   <url>http://maven.apache.org</url>
 
   <dependencies>
