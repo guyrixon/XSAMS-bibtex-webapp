@@ -6,6 +6,7 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>BibTeX extracted from XSAMS</title>
+        <link rel="stylesheet" href="xsams-views.css" type="text/css"/>
     </head>
     <body>
         <h1>BibTeX extracted from XSAMS</h1>

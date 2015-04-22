@@ -24,15 +24,15 @@ public class Locations {
   }
   
   public static String getCapabilitiesLocation(HttpServletRequest request) {
-    return getRootLocation(request) + "/capabilities";
+    return request.getContextPath() + "/capabilities";
   }
   
   public static String getCapabilitiesCssLocation(HttpServletRequest request) {
-    return getRootLocation(request) + "/Capabilities.xsl";
+    return request.getContextPath() + "/Capabilities.xsl";
   }
   
   public static String getAvailabilityLocation(HttpServletRequest request) {
-    return getRootLocation(request) + "/availability";
+    return request.getContextPath() + "/availability";
   }
   
 }

@@ -8,6 +8,7 @@
     <html>
       <head>
         <title>Service availbility</title>
+        <link rel="stylesheet" href="xsams-views.css" type="text/css"/>
       </head>
       <body>
         <h1>Service availability</h1>
