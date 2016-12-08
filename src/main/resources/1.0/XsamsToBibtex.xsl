@@ -132,7 +132,7 @@
     
   <xsl:template name="uri">
     <xsl:if test="xsams:UniformResourceIdentifier">
-      <xsl:text>, url{</xsl:text>
+      <xsl:text>, url={</xsl:text>
       <xsl:value-of select="xsams:UniformResourceIdentifier[1]"/>
       <xsl:text>}</xsl:text>
     </xsl:if>
