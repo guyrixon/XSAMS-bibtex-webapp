@@ -9,8 +9,8 @@
     <xsl:text>
     </xsl:text>
     <xsl:choose>
-      <xsl:when test="xsams:BibTex">
-        <xsl:value-of select="xsams:BibTex"/>
+      <xsl:when test="xsams:BibTeX">
+        <xsl:value-of select="xsams:BibTeX"/>
       </xsl:when>
       <xsl:otherwise>
         <xsl:choose>
@@ -23,6 +23,9 @@
           <xsl:when test="xsams:Category='book'">
             <xsl:call-template name="book"/>
           </xsl:when>
+          <xsl:when test="xsams:Category='private communication'">
+            <xsl:call-template name="private-communication"/>
+          </xsl:when>
           <!-- Detect books with wrong or missing catagories -->
           <xsl:when test="(xsams:Publisher and not (xsams:Publisher=''))">
             <xsl:call-template name="book"/>
@@ -34,6 +37,18 @@
         </xsl:choose>
       </xsl:otherwise>
     </xsl:choose>
+  </xsl:template>
+  
+  <xsl:template name="private-communication">
+    <xsl:text>@misc {</xsl:text>
+    <xsl:value-of select="@sourceID"/>
+    <xsl:call-template name="author-list"/>
+    <xsl:call-template name="title"/>
+    <xsl:call-template name="year"/>
+    <xsl:text>, howpublished='private communication'</xsl:text>
+    <xsl:call-template name="uri"/>
+    <xsl:text>}
+    </xsl:text>
   </xsl:template>
 
   <xsl:template name="article">
